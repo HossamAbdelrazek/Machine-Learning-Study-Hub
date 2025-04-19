@@ -1,16 +1,80 @@
 import sys
-import random
-import time
+import os
+import pandas as pd
+import json
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QComboBox, QPushButton, QListWidget,
                              QLabel, QGroupBox, QSpinBox, QListWidgetItem)
 from PyQt5.QtCore import Qt, QTimer
+from Inference_classes import UserUserRecommender, ContentBasedRecommender, HybridRecommender
 
+# Load metadata (for title lookup)
+metadata_df = pd.read_csv("Data/Films_metadata.csv")
+
+# Build recommenders
+user_model = UserUserRecommender("Data/ratings.csv", "Data/movies.csv")
+content_model = ContentBasedRecommender("Data/Films_metadata.csv", "Data/Genres_encoded.csv", "Data/ratings.csv")
+hybrid = HybridRecommender(user_model, content_model, metadata_df)
+
+# Load unique user IDs
+ratings_df = pd.read_csv("Data/ratings.csv")
+user_ids = ratings_df['userId'].unique()
+
+# Build recommendation DB
+RECOMMENDATION_JSON_PATH = "user_recommendations.json"
+
+# Try loading the recommendations if the file exists
+if os.path.exists(RECOMMENDATION_JSON_PATH):
+    print("Found cached recommendation DB. Loading...")
+    with open(RECOMMENDATION_JSON_PATH, "r", encoding="utf-8") as f:
+        recommendation_db = json.load(f)
+else:
+    print("No cached recommendation DB found. Building new one...")
+    recommendation_db = {}
+    for user_id in user_ids:
+        recs = hybrid.get_recs(user_id=user_id, n=20)
+        movie_titles = recs['title'].dropna().tolist()
+        recommendation_db[f"user{int(user_id):03d}"] = movie_titles
+        print(f"User {user_id} recommendations built.")
+    # Save the recommendation DB to a JSON file
+    print("Recommendation DB built.")
+    with open("user_recommendations.json", "w", encoding='utf-8') as f:
+        json.dump(recommendation_db, f, indent=4, ensure_ascii=False)
+    # Load ratings and metadata
+ratings_df = pd.read_csv("Data/ratings.csv")
+metadata_df = pd.read_csv("Data/Films_metadata.csv")
+
+# Normalize column names for safety
+ratings_df.columns = [col.lower() for col in ratings_df.columns]
+metadata_df.columns = [col.lower() for col in metadata_df.columns]
+
+# Ensure movie title is matched correctly
+if 'movieid' not in metadata_df.columns:
+    raise ValueError("Expected 'movieId' column in metadata file.")
+
+# Merge to get movie titles
+merged_df = pd.merge(ratings_df, metadata_df[['movieid', 'title']], on='movieid', how='left')
+
+# Drop 0.0 or NaN ratings (unrated)
+merged_df = merged_df[merged_df['rating'] > 0.0]
+
+# Create top-5 list per user
+top_movies_per_user = {}
+
+for user_id, group in merged_df.groupby('userid'):
+    top_movies = (
+        group.sort_values(by='rating', ascending=False)
+             .drop_duplicates(subset='movieid')
+             .head(5)['title']
+             .dropna()
+             .tolist()
+    )
+    top_movies_per_user[f"user{int(user_id):03d}"] = top_movies
 class UserMoviesApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.initUI()
-        self.loadDummyData()
+        self.loadData()
         
     def initUI(self):
         self.setWindowTitle('User Movies Recommendation System')
@@ -47,7 +111,7 @@ class UserMoviesApp(QMainWindow):
         recommendation_layout.addWidget(QLabel("Number of recommendations:"))
         self.num_recommendations = QSpinBox()
         self.num_recommendations.setMinimum(1)
-        self.num_recommendations.setMaximum(100)
+        self.num_recommendations.setMaximum(20)
         self.num_recommendations.setValue(5)
         recommendation_layout.addWidget(self.num_recommendations)
         
@@ -88,110 +152,9 @@ class UserMoviesApp(QMainWindow):
         # Set central widget
         self.setCentralWidget(central_widget)
         
-    def loadDummyData(self):
-        # Create dummy data for users and their favorite movies
-        self.user_data = {
-            "user001": [
-                "The Shawshank Redemption",
-                "The Godfather",
-                "The Dark Knight",
-                "Pulp Fiction",
-                "Fight Club"
-            ],
-            "user002": [
-                "Inception",
-                "Interstellar",
-                "The Matrix",
-                "Blade Runner 2049",
-                "Arrival"
-            ],
-            "user003": [
-                "The Lord of the Rings: The Fellowship of the Ring",
-                "Star Wars: Episode V - The Empire Strikes Back",
-                "Harry Potter and the Prisoner of Azkaban",
-                "The Hobbit: An Unexpected Journey",
-                "Dune"
-            ],
-            "user004": [
-                "Titanic",
-                "The Notebook",
-                "Pride and Prejudice",
-                "La La Land",
-                "A Star Is Born"
-            ],
-            "user005": [
-                "The Avengers",
-                "Iron Man",
-                "Black Panther",
-                "Spider-Man: Into the Spider-Verse",
-                "The Dark Knight Rises"
-            ]
-        }
-        
-        # Create dummy recommendation database
-        self.recommendation_db = {
-            "user001": [
-                "The Godfather: Part II",
-                "Goodfellas",
-                "The Departed",
-                "Se7en",
-                "The Silence of the Lambs",
-                "American History X",
-                "Memento",
-                "The Usual Suspects",
-                "Léon: The Professional",
-                "No Country for Old Men"
-            ],
-            "user002": [
-                "2001: A Space Odyssey",
-                "The Martian",
-                "Ex Machina",
-                "Eternal Sunshine of the Spotless Mind",
-                "Solaris",
-                "Moon",
-                "District 9",
-                "Her",
-                "WALL-E",
-                "Primer"
-            ],
-            "user003": [
-                "The Lord of the Rings: The Two Towers",
-                "The Lord of the Rings: The Return of the King",
-                "Star Wars: Episode IV - A New Hope",
-                "The Princess Bride",
-                "Narnia: The Lion, the Witch and the Wardrobe",
-                "Stardust",
-                "Pan's Labyrinth",
-                "Avatar",
-                "Harry Potter and the Goblet of Fire",
-                "Game of Thrones"
-            ],
-            "user004": [
-                "Romeo + Juliet",
-                "When Harry Met Sally",
-                "Sleepless in Seattle",
-                "Before Sunrise",
-                "The Fault in Our Stars",
-                "Eternal Sunshine of the Spotless Mind",
-                "500 Days of Summer",
-                "Silver Linings Playbook",
-                "About Time",
-                "The Shape of Water"
-            ],
-            "user005": [
-                "Thor: Ragnarok",
-                "Captain America: The Winter Soldier",
-                "Guardians of the Galaxy",
-                "Logan",
-                "Deadpool",
-                "Wonder Woman",
-                "The Dark Knight",
-                "Shazam!",
-                "Doctor Strange",
-                "Watchmen"
-            ]
-        }
-        
+    def loadData(self):
+        self.user_data = top_movies_per_user
+        self.recommendation_db = recommendation_db
         # Populate user combobox
         for user_id in self.user_data.keys():
             self.user_combo.addItem(user_id)
