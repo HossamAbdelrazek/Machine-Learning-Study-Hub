@@ -1,84 +1,95 @@
-# Project Title
+# Hybrid Movie Recommendation System
 
-This project is configured for developing applications that require a graphical user interface (GUI) with PyQt5 along with data analysis and machine learning functionalities. It leverages popular libraries including NumPy, pandas, scikit-learn, and visualization tools such as matplotlib and seaborn. The project also integrates the Surprise library for building recommender systems.
+This project implements a hybrid movie recommender system that combines User-User Collaborative Filtering with Content-Based Filtering to generate personalized and novel movie suggestions. The system leverages user rating data along with movie metadata (such as genres) to create tailored recommendations that reflect both user preferences and movie content.
+
+
 
 ## Table of Contents
 - [Project Overview](#project-overview)
+- [How It Works](#How-It-Works)
 - [Environment Preparation](#environment-preparation)
   - [Using Python Virtual Environment (venv)](#using-python-virtual-environment-venv)
   - [Using Conda](#using-conda)
 - [Dependencies](#dependencies)
-- [Usage](#usage)
-- [Contributing](#contributing)
+- [Running the Project](#Running-the-Project)
+- [Contributors](#contributors)
 - [License](#license)
 
 ## Project Overview
 
-This repository provides a ready-to-use Python environment tailored for applications that involve both GUI development (with PyQt5) and data-centric tasks including machine learning and data visualization. The setup ensures that all necessary libraries are installed with compatible versions.
+The goal of this system is to enhance user experience by intelligently recommending movies through a hybrid strategy:
 
-## Environment Preparation
+- Collaborative Filtering captures user taste patterns based on other users’ preferences.
+- Content-Based Filtering introduces diversity using movie attributes like genres.
+- The final output is a ranked, deduplicated list of movie recommendations tailored to the user.
 
-To ensure that all dependencies are installed correctly, follow one of the methods below to set up your environment.
+
+## How It Works
+
+1. Data Loading
+Loads multiple datasets including user ratings, movie metadata, genre encodings, and more (ratings.csv, tags.csv, Genres_encoded.csv, Films_metadata.csv, etc.).
+
+2. Preprocessing
+Cleans and merges data using movie IDs. Constructs:
+
+ - A user-item (utility) matrix from rating data
+
+ - A movie feature matrix using genre info
+
+3. User-User Collaborative Filtering
+Uses cosine similarity to find users with similar preferences and predict ratings for unseen movies.
+
+4. Content-Based Filtering
+Calculates similarity between movies based on genre vectors to recommend content-alike items.
+
+5. Hybrid Merging
+Combines recommendations from both methods, sorts them using global average rating, and trims to the requested number of suggestions.
+
+6. Ranking & Deduplication
+Ensures unique and relevant recommendations rise to the top.
+
+7. Final Output
+Returns a curated list of movie recommendations optimized for both personalization and discovery.
+
+## Environment Setup
+Choose either a Python virtual environment or Conda for setup:
 
 ### Using Python Virtual Environment (venv)
-
-1. **Create a virtual environment:**
-   ```bash
-   python3 -m venv myenv
-   ```
-2. **Activate the virtual environment:**
-   - **macOS/Linux:**
-     ```bash
-     source myenv/bin/activate
-     ```
-   - **Windows:**
-     ```bash
-     myenv\Scripts\activate
-     ```
-3. **Upgrade pip and install dependencies:**
-   ```bash
-   pip install --upgrade pip
-   pip install -r requirements.txt
-   ```
+    ```bash
+    python3 -m venv myenv
+    source myenv/bin/activate  # or myenv\Scripts\activate on Windows
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
 
 ### Using Conda
 
-1. **Create a Conda environment:**
-   ```bash
-   conda create --name myenv python=3.10
-   ```
-2. **Activate the environment:**
-   ```bash
-   conda activate myenv
-   ```
-3. **Install packages:**
-   ```bash
-   conda install numpy pandas scikit-learn matplotlib seaborn
-   conda install -c conda-forge pyqt
-   pip install scikit-surprise fastapi uvicorn pydantic requests
-   ```
+    ```bash
+    conda create --name myenv python=3.10
+    conda activate myenv
+    conda install numpy pandas scikit-learn matplotlib seaborn
+    conda install -c conda-forge pyqt
+    pip install scikit-surprise fastapi uvicorn pydantic requests
+    ```
 
 ## Dependencies
 
 The primary dependencies for this project are:
-- **PyQt5:** For building graphical user interfaces.
-- **scikit-surprise:** A library for building and analyzing recommender systems.
-- **numpy:** For numerical computing.
-- **pandas:** For data manipulation and analysis.
-- **scikit-learn:** For machine learning algorithms.
-- **matplotlib & seaborn:** For creating data visualizations.
-- **FastAPI:** For building high-performance web APIs.
-- **Uvicorn:** ASGI server for running FastAPI applications.
-- **Pydantic:** For data validation and settings management.
-- **Requests:** For making HTTP requests.
+- PyQt5 (if using GUI components)
+- NumPy / pandas for numerical and tabular data processing
+- scikit-learn for machine learning utilities
+- matplotlib / seaborn for data visualization
+- scikit-surprise for collaborative filtering
+- FastAPI / Uvicorn for web API support (if applicable)
+- Pydantic / Requests for data handling and HTTP
 
-## Usage
+## Runnning the Project
 
-After setting up your environment, you can run your main application script. For example:
-```bash
-python main.py
-```
-Replace `main.py` with the entry point of your project.
+After setting up your environment, you can run your main application script.
+    ```bash
+    python main.py
+    ```
+Make sure to replace main.py with the actual entry point script in your project.
 
 ## Contributing
 
