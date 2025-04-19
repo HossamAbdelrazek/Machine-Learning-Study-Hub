@@ -86,9 +86,11 @@ The primary dependencies for this project are:
 ## Runnning the Project
 
 After setting up your environment, you can run your main application script.
+
     ```bash
     python main.py
     ```
+
 Make sure to replace main.py with the actual entry point script in your project.
 
 ## Contributing
